@@ -41,7 +41,7 @@
       grid-template-columns: 1fr 1fr;
       gap: 1rem;
     }
-    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .stage-grid { grid-template-columns: 1fr; } }
     .card {
       background: var(--panel);
       border: 1px solid var(--border);
@@ -159,7 +159,7 @@
     #plotNote { margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted); }
     .stage-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      grid-template-columns: 1fr 1fr;
       gap: 1rem;
       margin-top: 0.75rem;
     }
