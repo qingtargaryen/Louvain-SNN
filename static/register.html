@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>注册 — DualFuse-CD</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --accent: #3d9cf5;
+      --border: #2d3a4d;
+      --err-bg: #3d1515;
+      --err-border: #8b3a3a;
+      --err-text: #ffb4b4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .card {
+      width: 100%;
+      max-width: 400px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem 1.35rem;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+    }
+    h1 { margin: 0 0 0.35rem; font-size: 1.35rem; font-weight: 600; }
+    .sub { margin: 0 0 1.25rem; font-size: 0.88rem; color: var(--muted); }
+    label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.35rem; }
+    input {
+      width: 100%;
+      padding: 0.55rem 0.7rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0d1218;
+      color: var(--text);
+      font-size: 0.95rem;
+      margin-bottom: 0.85rem;
+    }
+    input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    button {
+      width: 100%;
+      padding: 0.6rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      margin-top: 0.35rem;
+    }
+    button:hover { filter: brightness(1.08); }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    .err {
+      display: none;
+      background: var(--err-bg);
+      border: 1px solid var(--err-border);
+      color: var(--err-text);
+      padding: 0.65rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+      white-space: pre-wrap;
+    }
+    .footer {
+      margin-top: 1.15rem;
+      text-align: center;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    .footer a { color: var(--accent); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>注册</h1>
+    <p class="sub">用户名 3–64 字符；密码至少 6 位。注册成功后将自动登录。</p>
+    <div id="err" class="err"></div>
+    <form id="form">
+      <label for="username">用户名</label>
+      <input id="username" name="username" autocomplete="username" required />
+      <label for="password">密码</label>
+      <input id="password" name="password" type="password" autocomplete="new-password" required />
+      <label for="password2">确认密码</label>
+      <input id="password2" name="password2" type="password" autocomplete="new-password" required />
+      <button type="submit" id="btn">注册</button>
+    </form>
+    <div class="footer">已有账号？<a href="/login">登录</a></div>
+  </div>
+  <script>
+    const errEl = document.getElementById("err");
+    const params = new URLSearchParams(location.search);
+    const qerr = params.get("err");
+    const hints = {
+      mismatch: "两次输入的密码不一致。",
+      taken: "该用户名已被占用。",
+      invalid: "用户名或密码不符合要求（长度与格式见上方说明）。",
+    };
+    if (qerr && hints[qerr]) {
+      errEl.style.display = "block";
+      errEl.textContent = hints[qerr];
+    }
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("btn");
+      errEl.style.display = "none";
+      btn.disabled = true;
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value;
+      const password2 = document.getElementById("password2").value;
+      try {
+        const res = await fetch("/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ username, password, password2 }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          errEl.style.display = "block";
+          errEl.textContent = data.error || "注册失败。";
+          return;
+        }
+        window.location.href = "/";
+      } catch (x) {
+        errEl.style.display = "block";
+        errEl.textContent = String(x);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

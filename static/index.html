@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DualFuse-CD</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --accent: #3d9cf5;
+      --accent2: #5ce0a0;
+      --border: #2d3a4d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, #15202b 0%, var(--bg) 100%);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 600;
+    }
+    header p { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.9rem; }
+    main { max-width: 1200px; margin: 0 auto; padding: 1.25rem 1.5rem 2rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.15rem;
+    }
+    .card h2 {
+      margin: 0 0 0.75rem;
+      font-size: 1rem;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.35rem; }
+    textarea {
+      width: 100%;
+      min-height: 160px;
+      padding: 0.65rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0d1218;
+      color: var(--text);
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 0.82rem;
+      resize: vertical;
+    }
+    textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin-top: 0.75rem; }
+    .field { flex: 1; min-width: 120px; }
+    input[type="number"] {
+      width: 100%;
+      padding: 0.5rem 0.65rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0d1218;
+      color: var(--text);
+    }
+    button {
+      padding: 0.55rem 1.25rem;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+    button:hover { filter: brightness(1.08); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 0.65rem;
+      margin-bottom: 1rem;
+    }
+    .stat {
+      background: #0d1218;
+      border-radius: 8px;
+      padding: 0.65rem 0.75rem;
+      border: 1px solid var(--border);
+    }
+    .stat .v { font-size: 1.25rem; font-weight: 700; color: var(--accent2); }
+    .stat .k { font-size: 0.75rem; color: var(--muted); }
+    .chart-wrap { position: relative; height: 260px; margin-top: 0.5rem; }
+    .comm-list {
+      max-height: 280px;
+      overflow: auto;
+      font-size: 0.8rem;
+      font-family: ui-monospace, Consolas, monospace;
+      background: #0d1218;
+      border-radius: 8px;
+      padding: 0.65rem;
+      border: 1px solid var(--border);
+    }
+    .comm-list div { margin-bottom: 0.4rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
+    .err {
+      background: #3d1515;
+      border: 1px solid #8b3a3a;
+      color: #ffb4b4;
+      padding: 0.75rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .hint { font-size: 0.8rem; color: var(--muted); margin-top: 0.5rem; }
+    .file-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.65rem;
+      margin: 0.75rem 0 0.35rem;
+    }
+    .file-row input[type="file"] {
+      max-width: 100%;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .file-name { font-size: 0.85rem; color: var(--accent2); }
+    .link-btn {
+      background: transparent;
+      color: var(--accent);
+      padding: 0.35rem 0.5rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border: 1px solid var(--border);
+    }
+    .link-btn:hover { background: #0d1218; }
+    .plot-card img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      display: none;
+    }
+    #plotNote { margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted); }
+    .stage-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+      margin-top: 0.75rem;
+    }
+    .stage-item {
+      background: #0d1218;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.6rem 0.65rem;
+    }
+    .stage-item h3 {
+      margin: 0 0 0.5rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--accent2);
+      line-height: 1.35;
+    }
+    .stage-item img {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <header style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-start; gap:1rem;">
+    <div>
+      <h1>DualFuse-CD</h1>
+      <p>复杂网络社区发现：上传或粘贴边列表，设置相似度阈值与运行次数；小网络（≤100 节点）显示与 <code>showCommunity</code> 一致的结构图。</p>
+    </div>
+    <div style="font-size:0.9rem; color:var(--muted); display:flex; align-items:center; gap:0.65rem; flex-shrink:0;">
+      <span id="who"></span>
+      <form action="/logout" method="post" style="margin:0;">
+        <button type="submit" class="link-btn">退出登录</button>
+      </form>
+    </div>
+  </header>
+  <main>
+    <div class="grid">
+      <div class="card">
+        <h2>输入</h2>
+        <label for="file">从本机选择边列表文件（可选）</label>
+        <div class="file-row">
+          <input type="file" id="file" accept=".txt,.dat,text/plain,.edges" />
+          <span id="fileName" class="file-name"></span>
+          <button type="button" class="link-btn" id="clearFile">清除文件</button>
+          <button type="button" class="link-btn" id="loadFileToText">载入到编辑区</button>
+        </div>
+        <p class="hint">已选文件时优先<strong>上传该文件</strong>；否则使用下方文本框。每行两个整数，空格或逗号分隔；<code>#</code> 开头为注释。</p>
+        <label for="edges">边列表</label>
+        <textarea id="edges"></textarea>
+        <div class="row">
+          <div class="field">
+            <label for="sim">相似度阈值 SIM_Thread</label>
+            <input type="number" id="sim" value="0.4" min="0" max="1" step="0.05" />
+          </div>
+          <div class="field">
+            <label for="runs">运行次数（1–80，越大越慢）</label>
+            <input type="number" id="runs" value="12" min="1" max="80" step="1" />
+          </div>
+          <button type="button" id="btn">运行算法</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>摘要</h2>
+        <div id="err" class="err" style="display:none;"></div>
+        <div id="stats" class="stats" style="display:none;">
+          <div class="stat"><div class="k">平均模块度 Q̄</div><div class="v" id="avgQ">—</div></div>
+          <div class="stat"><div class="k">平均单次耗时 (s)</div><div class="v" id="avgT">—</div></div>
+          <div class="stat"><div class="k">社区数</div><div class="v" id="nComm">—</div></div>
+        </div>
+        <div class="chart-wrap"><canvas id="chartQ"></canvas></div>
+        <p class="hint">上图：每次运行的模块度 Q。</p>
+      </div>
+    </div>
+    <div class="grid" style="margin-top:1rem;">
+      <div class="card">
+        <h2>Q 取值分布</h2>
+        <div class="chart-wrap"><canvas id="chartHist"></canvas></div>
+      </div>
+      <div class="card">
+        <h2>算法运行结果 — 社区规模</h2>
+        <div class="chart-wrap"><canvas id="chartSizes"></canvas></div>
+      </div>
+    </div>
+    <div class="card plot-card" style="margin-top:1rem;">
+      <h2>算法运行结果 — 网络结构图</h2>
+      <p class="hint">节点数 ≤ 100 时绘制（与程序内 <code>showCommunity</code> 相同配色与边样式）；更大网络省略以节省耗时。</p>
+      <img id="plotImg" alt="社区划分结构图" />
+      <p id="plotNote"></p>
+    </div>
+    <div class="card" id="stagePlotsCard" style="margin-top:1rem; display:none;">
+      <h2>算法过程 — 各阶段网络结构</h2>
+      <p class="hint">基于<strong>最后一次运行</strong>在同一节点布局下展示：原始图 → SNN 初始社区 → 边界优化 → 过滤小社区 → Louvain 初始化与迭代（轮数过多时仅保留前几轮）→ 收敛结果。</p>
+      <p id="stagePlotsNote" class="hint" style="display:none;"></p>
+      <div id="stagePlots" class="stage-grid"></div>
+    </div>
+    <div class="card" style="margin-top:1rem;">
+      <h2>算法运行结果 — 社区列表（节点已排序）</h2>
+      <div id="comm" class="comm-list">运行后将显示各社区节点集合。</div>
+    </div>
+  </main>
+  <script>
+    const KARATE_SAMPLE = `1 2
+1 3
+2 3
+1 4
+2 4
+3 4
+1 5
+1 6
+1 7
+5 7
+6 7
+1 8
+2 8
+3 8
+4 8`;
+
+    fetch("/api/me", { credentials: "same-origin" })
+      .then((r) => r.json())
+      .then((d) => {
+        const el = document.getElementById("who");
+        if (d && d.ok && d.username) el.textContent = "用户：" + d.username;
+      })
+      .catch(() => {});
+
+    const ta = document.getElementById("edges");
+    ta.placeholder = KARATE_SAMPLE;
+    if (!ta.value.trim()) ta.value = KARATE_SAMPLE;
+
+    const fileInput = document.getElementById("file");
+    const fileNameEl = document.getElementById("fileName");
+    fileInput.addEventListener("change", () => {
+      const f = fileInput.files[0];
+      fileNameEl.textContent = f ? "已选择：" + f.name : "";
+    });
+    document.getElementById("clearFile").addEventListener("click", () => {
+      fileInput.value = "";
+      fileNameEl.textContent = "";
+    });
+    document.getElementById("loadFileToText").addEventListener("click", async () => {
+      const f = fileInput.files[0];
+      if (!f) {
+        alert("请先选择文件。");
+        return;
+      }
+      ta.value = await f.text();
+      fileNameEl.textContent = "已载入到编辑区：" + f.name;
+    });
+
+    let chartQ, chartHist, chartSizes;
+    const chartDefaults = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: "#c5d0e0" } } },
+      scales: {
+        x: { ticks: { color: "#8b9cb3" }, grid: { color: "#2d3a4d" } },
+        y: { ticks: { color: "#8b9cb3" }, grid: { color: "#2d3a4d" } }
+      }
+    };
+
+    function destroyCharts() {
+      [chartQ, chartHist, chartSizes].forEach(c => { if (c) c.destroy(); });
+      chartQ = chartHist = chartSizes = null;
+    }
+
+    function escapeHtml(s) {
+      const d = document.createElement("div");
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    function clearStagePlots() {
+      const card = document.getElementById("stagePlotsCard");
+      const box = document.getElementById("stagePlots");
+      const note = document.getElementById("stagePlotsNote");
+      if (card) card.style.display = "none";
+      if (box) box.innerHTML = "";
+      if (note) { note.style.display = "none"; note.textContent = ""; }
+    }
+
+    function renderStagePlots(r) {
+      const card = document.getElementById("stagePlotsCard");
+      const box = document.getElementById("stagePlots");
+      const note = document.getElementById("stagePlotsNote");
+      const stages = r.stage_plots;
+      const msg = r.stage_plots_message;
+      clearStagePlots();
+      if (msg) {
+        note.textContent = msg;
+        note.style.display = "block";
+        card.style.display = "block";
+      }
+      if (!stages || !stages.length) return;
+      card.style.display = "block";
+      stages.forEach((s) => {
+        const wrap = document.createElement("div");
+        wrap.className = "stage-item";
+        wrap.innerHTML =
+          "<h3>" + escapeHtml(s.title || "") + "</h3>" +
+          '<img alt="" src="data:image/png;base64,' + (s.png_base64 || "") + '" />';
+        box.appendChild(wrap);
+      });
+    }
+
+    function clearPlot() {
+      const plotImg = document.getElementById("plotImg");
+      const plotNote = document.getElementById("plotNote");
+      plotImg.style.display = "none";
+      plotImg.removeAttribute("src");
+      plotNote.textContent = "";
+      clearStagePlots();
+    }
+
+    document.getElementById("btn").addEventListener("click", async () => {
+      const btn = document.getElementById("btn");
+      const errEl = document.getElementById("err");
+      const statsEl = document.getElementById("stats");
+      errEl.style.display = "none";
+      statsEl.style.display = "none";
+      clearPlot();
+      btn.disabled = true;
+
+      try {
+        const sim = parseFloat(document.getElementById("sim").value);
+        const numRuns = parseInt(document.getElementById("runs").value, 10);
+        const chosen = fileInput.files[0];
+        const edgesText = document.getElementById("edges").value;
+        let res;
+        if (chosen) {
+          const fd = new FormData();
+          fd.append("edges_file", chosen);
+          fd.append("sim_threshold", String(sim));
+          fd.append("num_runs", String(numRuns));
+          res = await fetch("/api/run", { method: "POST", body: fd, credentials: "same-origin" });
+        } else if (edgesText.trim()) {
+          res = await fetch("/api/run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({
+              edges_text: edgesText,
+              sim_threshold: sim,
+              num_runs: numRuns
+            })
+          });
+        } else {
+          errEl.textContent = "请选择文件，或在下方文本框中填写边列表。";
+          errEl.style.display = "block";
+          destroyCharts();
+          clearPlot();
+          return;
+        }
+        const data = await res.json();
+        if (!data.ok) {
+          errEl.textContent = data.error || "未知错误";
+          errEl.style.display = "block";
+          destroyCharts();
+          clearPlot();
+          return;
+        }
+        const r = data.result;
+        document.getElementById("avgQ").textContent = r.avg_q;
+        document.getElementById("avgT").textContent = r.avg_time_sec;
+        document.getElementById("nComm").textContent = r.num_communities;
+        statsEl.style.display = "grid";
+
+        const runs = r.runs;
+        destroyCharts();
+        const ctxQ = document.getElementById("chartQ").getContext("2d");
+        chartQ = new Chart(ctxQ, {
+          type: "line",
+          data: {
+            labels: runs.map(x => x.run),
+            datasets: [{
+              label: "模块度 Q",
+              data: runs.map(x => x.q),
+              borderColor: "#3d9cf5",
+              backgroundColor: "rgba(61,156,245,0.15)",
+              fill: true,
+              tension: 0.2
+            }]
+          },
+          options: chartDefaults
+        });
+
+        const dist = r.q_distribution;
+        const ctxH = document.getElementById("chartHist").getContext("2d");
+        chartHist = new Chart(ctxH, {
+          type: "bar",
+          data: {
+            labels: dist.map(d => String(d.q)),
+            datasets: [{
+              label: "出现次数",
+              data: dist.map(d => d.count),
+              backgroundColor: "rgba(92,224,160,0.55)",
+              borderColor: "#5ce0a0",
+              borderWidth: 1
+            }]
+          },
+          options: {
+            ...chartDefaults,
+            plugins: { ...chartDefaults.plugins, legend: { display: false } }
+          }
+        });
+
+        const sizes = r.community_sizes;
+        const ctxS = document.getElementById("chartSizes").getContext("2d");
+        chartSizes = new Chart(ctxS, {
+          type: "bar",
+          data: {
+            labels: sizes.map((_, i) => "C" + (i + 1)),
+            datasets: [{
+              label: "节点数",
+              data: sizes,
+              backgroundColor: "rgba(245,158,66,0.55)",
+              borderColor: "#f59e42",
+              borderWidth: 1
+            }]
+          },
+          options: {
+            ...chartDefaults,
+            plugins: { ...chartDefaults.plugins, legend: { display: false } }
+          }
+        });
+
+        const comm = document.getElementById("comm");
+        comm.innerHTML = r.last_communities
+          .map((nodes, i) => `<div><strong>社区 ${i + 1}</strong>（${nodes.length} 点）: ${nodes.join(", ")}</div>`)
+          .join("");
+
+        const plotImg = document.getElementById("plotImg");
+        const plotNote = document.getElementById("plotNote");
+        if (r.plot_png_base64) {
+          plotImg.src = "data:image/png;base64," + r.plot_png_base64;
+          plotImg.style.display = "block";
+          plotNote.textContent =
+            (r.num_nodes != null ? "节点数：" + r.num_nodes + "。" : "") +
+            (r.plot_message || "");
+        } else {
+          plotImg.style.display = "none";
+          plotImg.removeAttribute("src");
+          plotNote.textContent =
+            r.plot_message ||
+            (r.num_nodes != null
+              ? "节点数：" + r.num_nodes + "，未生成结构图。"
+              : "未生成结构图。");
+        }
+        renderStagePlots(r);
+      } catch (e) {
+        errEl.textContent = String(e);
+        errEl.style.display = "block";
+        destroyCharts();
+        clearPlot();
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
