@@ -838,7 +838,7 @@ def run_louvain_snn_web(path, sim_thread=0.4, num_runs=20):
                     G_vis,
                     ent["partition"],
                     pos,
-                    title=ent["title"],
+                    title=None,
                 )
                 stage_plots.append({"title": ent["title"], "png_base64": b64})
             except Exception:
